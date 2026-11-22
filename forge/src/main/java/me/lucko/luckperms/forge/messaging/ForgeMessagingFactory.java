@@ -32,7 +32,7 @@ import me.lucko.luckperms.forge.LPForgePlugin;
 import net.luckperms.api.messenger.IncomingMessageConsumer;
 import net.luckperms.api.messenger.Messenger;
 import net.luckperms.api.messenger.MessengerProvider;
-import org.jspecify.annotations.NonNull;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class ForgeMessagingFactory extends MessagingFactory<LPForgePlugin> {
     public ForgeMessagingFactory(LPForgePlugin plugin) {

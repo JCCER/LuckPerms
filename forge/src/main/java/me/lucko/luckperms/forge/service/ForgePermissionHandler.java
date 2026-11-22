@@ -32,11 +32,12 @@ import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.verbose.event.CheckOrigin;
 import me.lucko.luckperms.forge.LPForgeBootstrap;
 import me.lucko.luckperms.forge.LPForgePlugin;
+import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
 import net.luckperms.api.context.ImmutableContextSet;
 import net.luckperms.api.query.QueryMode;
 import net.luckperms.api.query.QueryOptions;
 import net.luckperms.api.util.Tristate;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.server.permission.handler.IPermissionHandler;
 import net.minecraftforge.server.permission.nodes.PermissionDynamicContext;
@@ -51,7 +52,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class ForgePermissionHandler implements IPermissionHandler {
-    public static final Identifier IDENTIFIER = Identifier.fromNamespaceAndPath(LPForgeBootstrap.ID, "permission_handler");
+    public static final ResourceLocation IDENTIFIER = new ResourceLocation(LPForgeBootstrap.ID, "permission_handler");
 
     private final LPForgePlugin plugin;
     private final Set<PermissionNode<?>> permissionNodes;
@@ -66,7 +67,7 @@ public class ForgePermissionHandler implements IPermissionHandler {
     }
 
     @Override
-    public Identifier getIdentifier() {
+    public ResourceLocation getIdentifier() {
         return IDENTIFIER;
     }
 
@@ -77,9 +78,12 @@ public class ForgePermissionHandler implements IPermissionHandler {
 
     @Override
     public <T> T getPermission(ServerPlayer player, PermissionNode<T> node, PermissionDynamicContext<?>... context) {
-        User user = this.plugin.getUserManager().getIfLoaded(player.getUUID());
-        if (user != null) {
-            QueryOptions queryOptions = this.plugin.getContextManager().getQueryOptions(player);
+        UserCapabilityImpl capability = UserCapabilityImpl.getNullable(player);
+
+        if (capability != null) {
+            User user = capability.getUser();
+            QueryOptions queryOptions = capability.getQueryOptions();
+
             T value = getPermissionValue(user, queryOptions, node, context);
             if (value != null) {
                 return value;

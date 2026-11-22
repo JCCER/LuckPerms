@@ -23,27 +23,29 @@
  *  SOFTWARE.
  */
 
-package me.lucko.luckperms.forge.util;
+package me.lucko.luckperms.forge.calculator;
 
-import me.lucko.luckperms.common.minecraft.util.AbstractAsyncConfigurationTask;
-import me.lucko.luckperms.forge.LPForgePlugin;
-import net.minecraft.network.protocol.Packet;
-import net.minecraftforge.network.config.ConfigurationTaskContext;
+import me.lucko.luckperms.common.cacheddata.result.TristateResult;
+import me.lucko.luckperms.common.calculator.processor.AbstractPermissionProcessor;
+import me.lucko.luckperms.common.calculator.processor.PermissionProcessor;
+import net.luckperms.api.util.Tristate;
 
-import java.util.function.Consumer;
+/**
+ * Permission processor which is added to the owner of an Integrated server to
+ * simply return true if no other processors match.
+ */
+public class ServerOwnerProcessor extends AbstractPermissionProcessor implements PermissionProcessor {
+    private static final TristateResult TRUE_RESULT = new TristateResult.Factory(ServerOwnerProcessor.class).result(Tristate.TRUE);
 
-public class AsyncConfigurationTask extends AbstractAsyncConfigurationTask {
-    public AsyncConfigurationTask(LPForgePlugin plugin, Type type, Runnable task) {
-        super(plugin, type, task);
+    public static final ServerOwnerProcessor INSTANCE = new ServerOwnerProcessor();
+
+    private ServerOwnerProcessor() {
+
     }
 
     @Override
-    public void start(ConfigurationTaskContext ctx) {
-        start(() -> ctx.finish(type()));
+    public TristateResult hasPermission(String permission) {
+        return TRUE_RESULT;
     }
 
-    @Override
-    public void start(Consumer<Packet<?>> send) {
-        throw new IllegalStateException("This should never be called");
-    }
 }

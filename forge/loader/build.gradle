@@ -5,23 +5,23 @@ plugins {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 25
+    options.release = 17
 }
 
-repositories {
-    minecraft.mavenizer(it)
-    maven fg.forgeMaven
-    maven fg.minecraftLibsMaven
+minecraft {
+    mappings channel: 'official', version: minecraftVersion
 }
 
 dependencies {
-    implementation minecraft.dependency("net.minecraftforge:forge:${minecraftVersion}-${forgeVersion}")
+    minecraft "net.minecraftforge:forge:${minecraftVersion}-${forgeVersion}"
     implementation project(':api')
     implementation project(':common:loader-utils')
+    implementation project(':forge:forge-api')
 }
 
 build {
     dependsOn(":forge:build")
+    dependsOn(":forge:forge-api:build")
 }
 
 jar {
@@ -42,6 +42,10 @@ processResources {
     filesMatching('META-INF/mods.toml') {
         expand 'version': project.ext.fullVersion
     }
+}
+
+reobf {
+    shadowJar {}
 }
 
 shadowJar {

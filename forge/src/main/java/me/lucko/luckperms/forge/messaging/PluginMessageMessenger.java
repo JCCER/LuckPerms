@@ -33,22 +33,23 @@ import me.lucko.luckperms.forge.LPForgePlugin;
 import net.luckperms.api.messenger.IncomingMessageConsumer;
 import net.luckperms.api.messenger.Messenger;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.Identifier;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
-import net.minecraftforge.network.ChannelBuilder;
-import net.minecraftforge.network.EventNetworkChannel;
-import net.minecraftforge.network.PacketDistributor;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.event.EventNetworkChannel;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class PluginMessageMessenger extends AbstractPluginMessageMessenger implements Messenger {
-    private static final Identifier CHANNEL_ID = Identifier.parse(AbstractPluginMessageMessenger.CHANNEL);
-    private static final EventNetworkChannel CHANNEL = ChannelBuilder.named(CHANNEL_ID).optional().eventNetworkChannel();
+    private static final ResourceLocation CHANNEL = new ResourceLocation(AbstractPluginMessageMessenger.CHANNEL);
 
     private final LPForgePlugin plugin;
+    private EventNetworkChannel channel;
 
     public PluginMessageMessenger(LPForgePlugin plugin, IncomingMessageConsumer consumer) {
         super(consumer);
@@ -56,12 +57,13 @@ public class PluginMessageMessenger extends AbstractPluginMessageMessenger imple
     }
 
     public void init() {
-        CHANNEL.addListener(event -> {
+        this.channel = NetworkRegistry.newEventChannel(CHANNEL, () -> "1", predicate -> true, predicate -> true);
+        this.channel.addListener(event -> {
             byte[] buf = new byte[event.getPayload().readableBytes()];
             event.getPayload().readBytes(buf);
 
             handleIncomingMessage(buf);
-            event.getSource().setPacketHandled(true);
+            event.getSource().get().setPacketHandled(true);
         });
     }
 
@@ -81,8 +83,9 @@ public class PluginMessageMessenger extends AbstractPluginMessageMessenger imple
 
             FriendlyByteBuf byteBuf = new FriendlyByteBuf(Unpooled.buffer());
             byteBuf.writeBytes(buf);
+            Packet<?> packet = new ClientboundCustomPayloadPacket(CHANNEL, byteBuf);
 
-            CHANNEL.send(byteBuf, PacketDistributor.PLAYER.with(player));
+            player.connection.send(packet);
 
             SchedulerTask t = taskRef.getAndSet(null);
             if (t != null) {
@@ -90,12 +93,6 @@ public class PluginMessageMessenger extends AbstractPluginMessageMessenger imple
             }
         }, 10, TimeUnit.SECONDS);
         taskRef.set(task);
-    }
-
-    @SuppressWarnings("EmptyMethod")
-    public static void registerChannel() {
-        // do nothing - the channels are registered in the static initializer, we just
-        // need to make sure that is called (which it will be if this method runs)
     }
 
 }

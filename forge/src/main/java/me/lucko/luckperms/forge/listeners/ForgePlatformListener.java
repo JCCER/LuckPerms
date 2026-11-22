@@ -30,15 +30,15 @@ import com.mojang.brigadier.context.ParsedCommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import me.lucko.luckperms.common.config.ConfigKeys;
 import me.lucko.luckperms.common.locale.Message;
-import me.lucko.luckperms.common.minecraft.command.BrigadierInjector;
 import me.lucko.luckperms.forge.LPForgePlugin;
+import me.lucko.luckperms.forge.util.BrigadierInjector;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.server.players.ServerOpList;
 import net.minecraftforge.event.AddReloadListenerEvent;
 import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.eventbus.api.listener.SubscribeEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -51,7 +51,7 @@ public class ForgePlatformListener {
     }
 
     @SubscribeEvent
-    public boolean onCommand(CommandEvent event) {
+    public void onCommand(CommandEvent event) {
         CommandContextBuilder<CommandSourceStack> context = event.getParseResults().getContext();
 
         if (!this.plugin.getConfiguration().get(ConfigKeys.OPS_ENABLED)) {
@@ -63,12 +63,11 @@ public class ForgePlatformListener {
                 String name = node.getNode().getName().toLowerCase(Locale.ROOT);
                 if (name.equals("op") || name.equals("deop")) {
                     Message.OP_DISABLED.send(this.plugin.getSenderFactory().wrap(context.getSource()));
-                    return true; // cancel
+                    event.setCanceled(true);
+                    return;
                 }
             }
         }
-
-        return false; // don't cancel
     }
 
     @SubscribeEvent

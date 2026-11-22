@@ -4,21 +4,22 @@ plugins {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 25
+    options.release = 17
 }
 
-repositories {
-    minecraft.mavenizer(it)
-    maven fg.forgeMaven
-    maven fg.minecraftLibsMaven
+minecraft {
+    mappings channel: 'official', version: minecraftVersion
 }
 
 dependencies {
-    implementation minecraft.dependency("net.minecraftforge:forge:${minecraftVersion}-${forgeVersion}")
-    annotationProcessor 'net.minecraftforge:eventbus-validator:7.0.1'
+    minecraft "net.minecraftforge:forge:${minecraftVersion}-${forgeVersion}"
     implementation project(':common')
-    implementation project(':common:minecraft')
     compileOnly project(':common:loader-utils')
+    compileOnly project(':forge:forge-api')
+}
+
+reobf {
+    shadowJar {}
 }
 
 shadowJar {

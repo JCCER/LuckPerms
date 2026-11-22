@@ -26,14 +26,16 @@
 package me.lucko.luckperms.forge.context;
 
 import me.lucko.luckperms.common.context.manager.SimpleContextManager;
-import me.lucko.luckperms.common.minecraft.context.MinecraftContextManager;
 import me.lucko.luckperms.forge.LPForgePlugin;
+import net.luckperms.api.query.OptionKey;
 import net.luckperms.api.query.QueryOptions;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.UUID;
 
-public class ForgeContextManager extends SimpleContextManager<ServerPlayer, ServerPlayer> implements MinecraftContextManager {
+public class ForgeContextManager extends SimpleContextManager<ServerPlayer, ServerPlayer> {
+    public static final OptionKey<Boolean> INTEGRATED_SERVER_OWNER = OptionKey.of("integrated_server_owner", Boolean.class);
+
     public ForgeContextManager(LPForgePlugin plugin) {
         super(plugin, ServerPlayer.class, ServerPlayer.class);
     }
@@ -45,7 +47,7 @@ public class ForgeContextManager extends SimpleContextManager<ServerPlayer, Serv
 
     @Override
     public void customizeQueryOptions(ServerPlayer subject, QueryOptions.Builder builder) {
-        if (subject.level().getServer().isSingleplayerOwner(subject.nameAndId())) {
+        if (subject.getServer() != null && subject.getServer().isSingleplayerOwner(subject.getGameProfile())) {
             builder.option(INTEGRATED_SERVER_OWNER, true);
         }
     }
