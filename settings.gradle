@@ -14,6 +14,5 @@ include (
         'common',
         'common:loader-utils',
         'forge',
-        'forge:loader',
-        'forge:forge-api'
+        'forge:loader'
 )

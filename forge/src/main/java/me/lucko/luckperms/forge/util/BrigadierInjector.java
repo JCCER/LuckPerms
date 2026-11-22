@@ -30,9 +30,9 @@ import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import me.lucko.luckperms.common.graph.Graph;
 import me.lucko.luckperms.common.graph.TraversalAlgorithm;
-import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
-import me.lucko.luckperms.forge.capabilities.UserCapability;
-import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
+import me.lucko.luckperms.common.model.User;
+import me.lucko.luckperms.forge.LPForgePlugin;
+import net.luckperms.api.query.QueryOptions;
 import net.luckperms.api.util.Tristate;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
@@ -68,7 +68,7 @@ public final class BrigadierInjector {
      * @param plugin the plugin
      * @param dispatcher the command dispatcher
      */
-    public static void inject(LuckPermsPlugin plugin, CommandDispatcher<CommandSourceStack> dispatcher) {
+    public static void inject(LPForgePlugin plugin, CommandDispatcher<CommandSourceStack> dispatcher) {
         Iterable<CommandNodeWithParent> tree = CommandNodeGraph.INSTANCE.traverse(
                 TraversalAlgorithm.DEPTH_FIRST_PRE_ORDER,
                 new CommandNodeWithParent(null, dispatcher.getRoot())
@@ -89,7 +89,7 @@ public final class BrigadierInjector {
 
             plugin.getPermissionRegistry().insert(permission);
 
-            InjectedPermissionRequirement newRequirement = new InjectedPermissionRequirement(permission, requirement);
+            InjectedPermissionRequirement newRequirement = new InjectedPermissionRequirement(plugin, permission, requirement);
             try {
                 REQUIREMENT_FIELD.set(node.node, newRequirement);
             } catch (IllegalAccessException e) {
@@ -127,21 +127,26 @@ public final class BrigadierInjector {
      * delegating to the existing requirement.
      */
     private static final class InjectedPermissionRequirement implements Predicate<CommandSourceStack> {
+        private final LPForgePlugin plugin;
         private final String permission;
         private final Predicate<CommandSourceStack> delegate;
 
-        private InjectedPermissionRequirement(String permission, Predicate<CommandSourceStack> delegate) {
+        private InjectedPermissionRequirement(LPForgePlugin plugin, String permission, Predicate<CommandSourceStack> delegate) {
+            this.plugin = plugin;
             this.permission = permission;
             this.delegate = delegate;
         }
 
         @Override
         public boolean test(CommandSourceStack source) {
-            if (source.getEntity() instanceof ServerPlayer) {
-                ServerPlayer player = (ServerPlayer) source.getEntity();
+            if (source.getEntity() instanceof ServerPlayer player) {
+                User user = this.plugin.getUserManager().getIfLoaded(player.getUUID());
+                if (user == null) {
+                    return false;
+                }
 
-                UserCapability user = UserCapabilityImpl.get(player);
-                Tristate state = user.checkPermission(this.permission);
+                QueryOptions queryOptions = this.plugin.getContextManager().getQueryOptions(player);
+                Tristate state = user.getCachedData().getPermissionData(queryOptions).checkPermission(this.permission);
 
                 if (state != Tristate.UNDEFINED) {
                     return state.asBoolean() && this.delegate.test(source.withPermission(4));

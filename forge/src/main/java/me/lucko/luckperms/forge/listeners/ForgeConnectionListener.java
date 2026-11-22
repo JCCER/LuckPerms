@@ -33,7 +33,6 @@ import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.plugin.util.AbstractConnectionListener;
 import me.lucko.luckperms.forge.ForgeSenderFactory;
 import me.lucko.luckperms.forge.LPForgePlugin;
-import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
 import net.kyori.adventure.text.Component;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.Connection;
@@ -89,7 +88,7 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
             this.plugin.getEventDispatcher().dispatchPlayerLoginProcess(uniqueId, username, user);
         } catch (Exception ex) {
             this.plugin.getLogger().severe("Exception occurred whilst loading data for " + uniqueId + " - " + username, ex);
-            
+
             if (this.plugin.getConfiguration().get(ConfigKeys.CANCEL_FAILED_LOGINS)) {
                 Component component = TranslationManager.render(Message.LOADING_DATABASE_ERROR.build());
                 connection.send(new ClientboundLoginDisconnectPacket(ForgeSenderFactory.toNativeText(component)));
@@ -127,9 +126,6 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
             }
         }
 
-        // initialise capability
-        UserCapabilityImpl userCapability = UserCapabilityImpl.get(player);
-        userCapability.initialise(user, player, this.plugin);
         this.plugin.getContextManager().signalContextUpdate(player);
     }
 
