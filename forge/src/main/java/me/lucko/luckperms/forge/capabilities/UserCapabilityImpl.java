@@ -26,7 +26,6 @@
 package me.lucko.luckperms.forge.capabilities;
 
 import me.lucko.luckperms.common.cacheddata.type.PermissionCache;
-import me.lucko.luckperms.common.context.manager.QueryOptionsSupplier;
 import me.lucko.luckperms.common.locale.TranslationManager;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.verbose.event.CheckOrigin;
@@ -79,7 +78,8 @@ public class UserCapabilityImpl implements UserCapability {
     private boolean initialised = false;
 
     private User user;
-    private QueryOptionsSupplier queryOptionsSupplier;
+    private ForgeContextManager contextManager;
+    private ServerPlayer player;
     private String language;
     private Locale locale;
 
@@ -87,9 +87,10 @@ public class UserCapabilityImpl implements UserCapability {
 
     }
 
-    public void initialise(UserCapabilityImpl previous) {
+    public void initialise(UserCapabilityImpl previous, ServerPlayer player) {
         this.user = previous.user;
-        this.queryOptionsSupplier = previous.queryOptionsSupplier;
+        this.contextManager = previous.contextManager;
+        this.player = player;
         this.language = previous.language;
         this.locale = previous.locale;
         this.initialised = true;
@@ -97,17 +98,8 @@ public class UserCapabilityImpl implements UserCapability {
 
     public void initialise(User user, ServerPlayer player, ForgeContextManager contextManager) {
         this.user = user;
-        this.queryOptionsSupplier = new QueryOptionsSupplier() {
-            @Override
-            public QueryOptions getQueryOptions() {
-                return contextManager.getQueryOptions(player);
-            }
-
-            @Override
-            public void invalidateCache() {
-                contextManager.invalidateCache(player);
-            }
-        };
+        this.contextManager = contextManager;
+        this.player = player;
         this.initialised = true;
     }
 
@@ -125,7 +117,7 @@ public class UserCapabilityImpl implements UserCapability {
             throw new NullPointerException("permission");
         }
 
-        return checkPermission(permission, this.queryOptionsSupplier.getQueryOptions());
+        return checkPermission(permission, getQueryOptions());
     }
 
     @Override
@@ -151,12 +143,8 @@ public class UserCapabilityImpl implements UserCapability {
 
     @Override
     public QueryOptions getQueryOptions() {
-        return getQueryOptionsSupplier().getQueryOptions();
-    }
-
-    public QueryOptionsSupplier getQueryOptionsSupplier() {
         assertInitialised();
-        return this.queryOptionsSupplier;
+        return this.contextManager.getQueryOptions(this.player);
     }
 
     public Locale getLocale(ServerPlayer player) {

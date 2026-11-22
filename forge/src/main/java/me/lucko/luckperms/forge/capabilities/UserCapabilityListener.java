@@ -65,8 +65,7 @@ public class UserCapabilityListener {
             UserCapabilityImpl previous = UserCapabilityImpl.get(previousPlayer);
             UserCapabilityImpl current = UserCapabilityImpl.get(currentPlayer);
 
-            current.initialise(previous);
-            current.getQueryOptionsSupplier().invalidateCache();
+            current.initialise(previous, (ServerPlayer) currentPlayer);
         } catch (IllegalStateException e) {
             // continue on if we cannot copy original data
         } finally {
