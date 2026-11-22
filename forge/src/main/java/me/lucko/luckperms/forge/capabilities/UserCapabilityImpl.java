@@ -26,10 +26,11 @@
 package me.lucko.luckperms.forge.capabilities;
 
 import me.lucko.luckperms.common.cacheddata.type.PermissionCache;
+import me.lucko.luckperms.common.context.manager.QueryOptionsSupplier;
 import me.lucko.luckperms.common.locale.TranslationManager;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.verbose.event.CheckOrigin;
-import me.lucko.luckperms.forge.context.ForgeContextManager;
+import me.lucko.luckperms.forge.LPForgePlugin;
 import net.luckperms.api.query.QueryOptions;
 import net.luckperms.api.util.Tristate;
 import net.minecraft.server.level.ServerPlayer;
@@ -43,16 +44,14 @@ import java.util.Locale;
 public class UserCapabilityImpl implements UserCapability {
 
     private static LazyOptional<UserCapability> getCapability(Player player) {
-        if (!player.isRemoved()) {
-            return player.getCapability(CAPABILITY);
-        } else {
-            player.reviveCaps();
-            try {
-                return player.getCapability(CAPABILITY);
-            } finally {
-                player.invalidateCaps();
-            }
+        LazyOptional<UserCapability> optional = player.getCapability(CAPABILITY);
+        if (optional.isPresent()) {
+            return optional;
         }
+
+        // if capability is missing, try to restore them before trying again
+        player.reviveCaps();
+        return player.getCapability(CAPABILITY);
     }
 
     /**
@@ -78,8 +77,7 @@ public class UserCapabilityImpl implements UserCapability {
     private boolean initialised = false;
 
     private User user;
-    private ForgeContextManager contextManager;
-    private ServerPlayer player;
+    private QueryOptionsSupplier queryOptionsSupplier;
     private String language;
     private Locale locale;
 
@@ -87,19 +85,17 @@ public class UserCapabilityImpl implements UserCapability {
 
     }
 
-    public void initialise(UserCapabilityImpl previous, ServerPlayer player) {
+    public void initialise(UserCapabilityImpl previous, ServerPlayer player, LPForgePlugin plugin) {
         this.user = previous.user;
-        this.contextManager = previous.contextManager;
-        this.player = player;
+        this.queryOptionsSupplier = plugin.getContextManager().createQueryOptionsSupplier(player);
         this.language = previous.language;
         this.locale = previous.locale;
         this.initialised = true;
     }
 
-    public void initialise(User user, ServerPlayer player, ForgeContextManager contextManager) {
+    public void initialise(User user, ServerPlayer player, LPForgePlugin plugin) {
         this.user = user;
-        this.contextManager = contextManager;
-        this.player = player;
+        this.queryOptionsSupplier = plugin.getContextManager().createQueryOptionsSupplier(player);
         this.initialised = true;
     }
 
@@ -117,7 +113,7 @@ public class UserCapabilityImpl implements UserCapability {
             throw new NullPointerException("permission");
         }
 
-        return checkPermission(permission, getQueryOptions());
+        return checkPermission(permission, this.queryOptionsSupplier.getQueryOptions());
     }
 
     @Override
@@ -143,8 +139,12 @@ public class UserCapabilityImpl implements UserCapability {
 
     @Override
     public QueryOptions getQueryOptions() {
+        return getQueryOptionsSupplier().getQueryOptions();
+    }
+
+    public QueryOptionsSupplier getQueryOptionsSupplier() {
         assertInitialised();
-        return this.contextManager.getQueryOptions(this.player);
+        return this.queryOptionsSupplier;
     }
 
     public Locale getLocale(ServerPlayer player) {

@@ -129,7 +129,7 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
 
         // initialise capability
         UserCapabilityImpl userCapability = UserCapabilityImpl.get(player);
-        userCapability.initialise(user, player, this.plugin.getContextManager());
+        userCapability.initialise(user, player, this.plugin);
         this.plugin.getContextManager().signalContextUpdate(player);
     }
 
