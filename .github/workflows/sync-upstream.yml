@@ -1,0 +1,50 @@
+name: Sync upstream master
+
+# Keeps this fork's master in sync with upstream LuckPerms/LuckPerms.
+# The forge-1.20.1 backport branch is NOT auto-synced; merge master into it manually.
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # every Monday at 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/LuckPerms/LuckPerms.git
+          git fetch --no-tags upstream master
+
+      - name: Merge upstream master
+        id: merge
+        run: |
+          if git merge-base --is-ancestor upstream/master HEAD; then
+            echo "Already up to date with upstream."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git merge --no-edit -m "chore: merge upstream LuckPerms master (auto-sync)" upstream/master
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push to fork
+        if: steps.merge.outputs.changed == 'true'
+        run: git push origin HEAD:master
